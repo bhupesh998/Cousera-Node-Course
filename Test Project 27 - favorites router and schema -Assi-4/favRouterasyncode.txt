@@ -1,0 +1,93 @@
+const express = require('express')
+const mongoose = require('mongoose')
+var authenticate = require('../authenticate')
+const Favourites = require('../models/favourites')
+const Dishes = require('../models/dishes')
+
+const favouriteRouter = express.Router()
+
+favouriteRouter.use(express.json())
+
+favouriteRouter
+  .get('/', authenticate.verifyUser, async (req, res) => {
+    try {
+      const favourites = await Favourites.findOne({ user: req.user._id })
+      if (!favourites) return res.status(404).send('No Favourites Found')
+
+      await favourites.populate('user').execPopulate()
+      await favourites
+        .populate({
+          path: 'dishes',
+          select: '-comments',
+        })
+        .execPopulate()
+      res.send(favourites)
+    } catch (error) {
+      res.status(500).send(error)
+    }
+  })
+  .post('/', authenticate.verifyUser, async (req, res) => {
+    try {
+      let fav = await Favourites.findOne({ user: req.user._id })
+      if (!fav) {
+        fav = new Favourites({ user: req.user._id })
+      }
+      const dishes = req.body
+      for (let d of dishes) {
+        const dish = await Dishes.findById(d['_id'])
+        if (!dish) {
+          return res.status(404).send({ error: `dish id ${d['_id']} not found` })
+        }
+        if (!fav.dishes.includes(dish._id)) fav.dishes.push(dish._id)
+      }
+      await fav.save()
+      res.send(fav)
+    } catch (error) {
+      res.status(500).send(error)
+    }
+  })
+  .post('/:dishId', authenticate.verifyUser, async (req, res) => {
+    try {
+      let fav = await Favourites.findOne({ user: req.user._id })
+      if (!fav) {
+        fav = new Favourites({ user: req.user._id })
+      }
+      const dish = await Dishes.findById(req.params.dishId)
+      if (!dish) {
+        res.status(404).send(new Error('Dish not found'))
+      }
+      if (!fav.dishes.includes(dish._id)) fav.dishes.push(dish._id)
+
+      await fav.save()
+      res.send(fav)
+    } catch (err) {
+      res.status(500).send(err)
+    }
+  })
+  .delete('/', authenticate.verifyUser, async (req, res) => {
+    try {
+      let fav = await Favourites.findOneAndDelete({ user: req.user._id })
+      if (!fav) {
+        res.status(404).send('Favourites are empty')
+      }
+      res.send({ message: 'All Favourite Dishes Deleted' })
+    } catch (error) {
+      res.status(500).send(error)
+    }
+  })
+  .delete('/:dishId', authenticate.verifyUser, async (req, res) => {
+    try {
+      let fav = await Favourites.findOne({ user: req.user._id })
+      if (!fav) {
+        res.status(404).send('Favourites are empty')
+      }
+
+      fav.dishes = fav.dishes.filter(dish => dish != req.params.dishId)
+      await fav.save()
+      res.send(fav)
+    } catch (error) {
+      res.status(500).send(error)
+    }
+  })
+
+module.exports = favouriteRouter

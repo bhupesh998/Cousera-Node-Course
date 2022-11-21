@@ -1,0 +1,19 @@
+{
+  "name": "node-mongodb",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index"
+  },
+  "author": "Bhupesh Choudhary",
+  "license": "ISC",
+  "dependencies": {
+    "assert": "^1.4.1",
+    "mongodb": "^3.7.3"
+  },
+  "devDependencies": {
+    "@types/mongodb": "^4.0.7"
+  }
+}
